@@ -17,6 +17,8 @@ version=1.2	# added sudo to mkdir for MBR
 		# merged in notes from older mybackup
 		# installed on: Love2d		- still to be installed on U2, U3, Linux Backup drive
 version=1.3	# space betweeen MBRs
+version=1.4	# transition to new Media partition (and other partitions renamed)
+version=1.5	# Shared and Media partitions
 
 if [ "$1" = "--version" ]; then echo version: ${version}; exit; fi
 
@@ -41,8 +43,8 @@ BackupDrive='Linux backup'		# USB backup drive (I removed space from 'name' & it
 	#├─sda2   8:2    0 288.1G  0 part                                         
 	#├─sda3   8:3    0     1K  0 part                                         
 	#├─sda4   8:4    0  29.3G  0 part                                         Shared
-	#├─sda5   8:5    0  23.3G  0 part                                         d8root
-	#├─sda6   8:6    0 119.5G  0 part                                         d8home
+	#├─sda5   8:5    0  23.3G  0 part                                         d-root
+	#├─sda6   8:6    0 119.5G  0 part                                         d-home
 	#└─sda7   8:7    0   5.4G  0 part [SWAP]                                  
 	
 	#sdc      8:32   0   3.7T  0 disk                                         
@@ -66,7 +68,7 @@ BackupDrive='Linux backup'		# USB backup drive (I removed space from 'name' & it
 function usage		{ echo; echo "Usage: ${0##*/} [machine name: Love2d|Sharon-pc] [BackupFolderName]";echo;}
 
 ####################
-#If parameter just show dirs for that machine, else show for both
+#If 1st parameter exists then just show dirs for that given machine, else show dirs for both machines
 function myls {	
  echo -n "'$1' existing backups:"
  if [ -d "$2" ]; then echo; ls -lFgG "$2" |grep -v ^total |grep ' [0-9][0-9]-' |sed 's/..................//'; else echo ' (none)'; fi; 
@@ -90,7 +92,7 @@ function badmachine	{ echo "Machine type '$1' is invalid.";}
 ###################
 function cleanup	{
  # echo "--- cleaning up --------------------------------------"
- sudo umount "/mnt/$BackupDrive"; rmdir "/mnt/$BackupDrive"
+ sudo umount "/mnt/$BackupDrive"; sudo rmdir "/mnt/$BackupDrive"
 }
 
 ########################################################################
@@ -112,99 +114,30 @@ if [ $# = 2 ]; then if [ "$1" != "Love2d" -a "$1" != "Sharon-pc" ]; then badmach
 
 if [ "$1" = 'Love2d' ]; then
 # HOWARDS
-    MyRoot='d8root'		# Love2 Debian /   (root) partition name
-    MyHome='d8home'		# Love2 Debian /home	  partition name
-     MyVar='d8var'		# Love2 Debian /var	  partition name
+    MyRoot='d-root'		# Love2 Debian /   (root) partition name
+    MyHome='d-home'		# Love2 Debian /home	  partition name
+     MyVar='d-var'		# Love2 Debian /var	  partition name
+#    MyTmp=			# (Don't back this up)
   MyShared='Shared'		# Love2 Debian Shared	  partition name
+   MyMedia='Media'		# Love2 Debian Shared	  partition name
 
  sudo umount	      "/mnt/$MyRoot"	>& /dev/null		# --- cleanup from prior failed attempt:
  sudo umount	      "/mnt/$MyHome"	>& /dev/null
  sudo umount	      "/mnt/$MyVar"	>& /dev/null
  sudo umount	      "/mnt/$MyShared"	>& /dev/null
+ sudo umount	      "/mnt/$MyMedia"	>& /dev/null
 
  sudo umount "/media/ubuntu/$MyRoot" 	>& /dev/null		# Unmount them from ubuntu so they will work properly
  sudo umount "/media/ubuntu/$MyHome" 	>& /dev/null
  sudo umount "/media/ubuntu/$MyVar"	>& /dev/null
  sudo umount "/media/ubuntu/$MyShared" 	>& /dev/null
+ sudo umount "/media/ubuntu/$MyMedia" 	>& /dev/null
 
  sudo mkdir  "/mnt/$MyRoot"	>& /dev/null; sudo mount -L "$MyRoot"		"/mnt/$MyRoot"				>& /dev/null
- sudo mkdir  "#NOTES:
-
-# ------------------------------------------------------------------
-# Debian 8 base directories:	
-#
-# -----------------------------------------------------------
-#	boot/			- stuff to boot with
-#	initrd.img@		- ramdisk
-#	vmlinuz@		- kernel
-# -----------------------------------------------------------
-#	media/			- exclude
-#	mnt/			- exclude
-# -----------------------------------------------------------
-#	etc/			- data, kept,  between boots, settings, host specific
-#	var/			- data, kept,  between boots (variable files)
-#	srv/			- data, kept,  between boots for servers
-#
-#	tmp/			- data, wiped, programs must not assume that any files or directories in /tmp are preserved between invocations of the program
-#	run/			- data, wiped, between boots, Run-time variable data
-# -----------------------------------------------------------
-#	dev/			-         populated at boot - devices
-#	proc/			- procfs, populated at boot - statuses, kernel and process
-#	sys/			-  sysfs, populated at boot - provides device & driver info and an API. It also makes things in /proc depricated, e.g., ACPI, more info: http://en.wikipedia.org/wiki/Sysfs - - Since ker 2.6 
-# -----------------------------------------------------------
-#	 bin/			- binaries, user commands, essential
-#	sbin/			- binaries, system maintance
-#	lib/			- shared libraries, essential
-#	lib64/			- shared libraries, essential, x64
-#
-#	usr/			- utilities and applicatons (2nd level programs)
-#	usr/bin/		
-#	usr/sbin/		- for system administrators
-#	usr/lib/		- libraries for /usr/bin & /usr/sbin
-#
-#	usr/local/		- users programs that you install from source, e.g. apache
-#	usr/local/bin/
-#	usr/local/games/
-#
-#	opt/			- optional add on application software
-# -----------------------------------------------------------
-#	root/			- like home but for user: root
-#	home/			- other users
-# -----------------------------------------------------------
-#	live-build/		- unique to Debian (not in Ubuntu)  -- empty
-
-
-
-# ------------------------------------------------------------------
-# UBUNTU's base directories:
-#
-#	bin/
-#	boot/
-#	cdrom/			- unique to Ubuntu
-#	dev/
-#	etc/
-#	home/
-#	initrd.img@
-#	lib/
-#	lib64/
-#	media/
-#	mnt/
-#	opt/
-#	proc/
-#	rofs/			- unqique to ubuntu
-#	root/
-#	run/
-#	sbin/
-#	snap/			- unqique to ubuntu
-#	srv/
-#	sys/
-#	tmp/
-#	usr/
-#	var/
-#	vmlinuz@
-/mnt/$MyHome"	>& /dev/null; sudo mount -L "$MyHome"		"/mnt/$MyHome"				>& /dev/null
+ sudo mkdir  "/mnt/$MyHome"	>& /dev/null; sudo mount -L "$MyHome"		"/mnt/$MyHome"				>& /dev/null
  sudo mkdir  "/mnt/$MyVar"	>& /dev/null; sudo mount -L "$MyVar"		"/mnt/$MyVar"				>& /dev/null
  sudo mkdir  "/mnt/$MyShared"	>& /dev/null; sudo mount -L "$MyShared"		"/mnt/$MyShared"			>& /dev/null
+ sudo mkdir  "/mnt/$MyMedia"	>& /dev/null; sudo mount -L "$MyMedia"		"/mnt/$MyMedia"				>& /dev/null
 
 
 else
@@ -227,6 +160,7 @@ else
 
 fi
 
+
 #=================================================================
 BackupDir="$BackupBase/$1/$SubDir/$2"	# /dir/BackupFolderName
 
@@ -237,45 +171,80 @@ RootExclude=" --exclude={\"/dev/*\",\"/lost+found\",\"/media/*\",\"/mnt/*\",\"/p
 HomeExclude=" --exclude='*cache*'"	#this does not work
 
 
+#=================================================================
+#Subdir names
+
+#old
+	  ROOT_DIR=root
+	  HOME_DIR=home
+	   VAR_DIR=var
+	SHARED_DIR=shared
+
+#new
+	  ROOT_DIR=root
+	  HOME_DIR=home
+	   VAR_DIR=var
+	SHARED_DIR=Shared
+	 MEDIA_DIR=Media
+
+
+### Backup ######################
 if [ "${0##*/}" = "mybackup" ]; then
 	#echo backing up...
 
 	echo; echo "--- Backing up:  / -----------------------------------"
- 	sudo mkdir -p						"/mnt/$BackupDir/root"	# Making directories to save backup to
-	$MyRsync $RootExclude	"/mnt/$MyRoot/"			"/mnt/$BackupDir/root/"		; echo
+ 	sudo mkdir -p						"/mnt/$BackupDir/$ROOT_DIR"	# Making directories to save backup to
+	$MyRsync $RootExclude	"/mnt/$MyRoot/"			"/mnt/$BackupDir/$ROOT_DIR/"		; echo
 
 	echo; echo "--- Backing up:  /home -------------------------------"
- 	sudo mkdir -p						"/mnt/$BackupDir/home"
-	$MyRsync $HomeExclude	"/mnt/$MyHome/"			"/mnt/$BackupDir/home/"		; echo
+ 	sudo mkdir -p						"/mnt/$BackupDir/$HOME_DIR"
+	$MyRsync $HomeExclude	"/mnt/$MyHome/"			"/mnt/$BackupDir/$HOME_DIR/"		; echo
 
    if [ "$MyShared" ]; then		#no var or shared partions on Sharon's machine
 
 	echo; echo "--- Backing up:  /var --------------------------------"
- 	sudo mkdir -p						"/mnt/$BackupDir/var"
-	$MyRsync 		"/mnt/$MyVar/"			"/mnt/$BackupDir/var/"		; echo
+ 	sudo mkdir -p						"/mnt/$BackupDir/$VAR_DIR"
+	$MyRsync 		"/mnt/$MyVar/"			"/mnt/$BackupDir/$VAR_DIR/"		; echo
 
  	echo; echo "--- Backing up:  Shared ------------------------------"
- 	sudo mkdir -p 						"/mnt/$BackupDir/shared"
- 	$MyRsync 		"/mnt/$MyShared/"		"/mnt/$BackupDir/shared/"	; echo
+ 	sudo mkdir -p 						"/mnt/$BackupDir/$SHARED_DIR"
+ 	$MyRsync 		"/mnt/$MyShared/"		"/mnt/$BackupDir/$SHARED_DIR/"		; echo
    fi
 
 
    # Backup MBR (but only of sda ??)
-   sudo mkdir -p "/mnt/$BackupDir/mbr"
+   sudo mkdir -p "/mnt/$BackupDir/MBR"
 
-   drive=`sudo blkid | grep d8root | sed s/[0-9]:.*//`
+   drive=`sudo blkid | grep $MyRoot | sed s/[0-9]:.*//`
    part=`echo $drive | sed s#/dev/##`
 
    echo;echo "--- Backing up:  MBR of $part ----------------------"
-   sudo dd if="$drive" of="/mnt/$BackupDir/mbr/dd-$part-0-512" bs=1 count=512	; echo
-   sudo dd if="$drive" of="/mnt/$BackupDir/mbr/dd-$part-0-1M"  bs=1 count=1M
+   sudo dd if="$drive" of="/mnt/$BackupDir/MBR/dd-$part-0-512" bs=1 count=512	; echo
+   sudo dd if="$drive" of="/mnt/$BackupDir/MBR/dd-$part-0-1M"  bs=1 count=1M
 
    echo 
    echo of this drive:
    lsblk | grep "$part"
 
 
-else
+
+### Backup media #################
+elif [ "${0##*/}" = "mybackup.media" ]; then
+
+echo "xx"
+
+   if [ "$MyShared" ]; then		#no var or shared partions on Sharon's machine
+ 	echo; echo "--- Backing up:  Media -------------------------------"
+ 	sudo mkdir -p 						"/mnt/$BackupDir-media/$MEDIA_DIR"
+ 	$MyRsync 		"/mnt/$MyMedia/"		"/mnt/$BackupDir-media/$MEDIA_DIR/"	; echo
+   else
+	echo "Error: No Media shared partion on Sharons machine"
+   fi
+
+
+
+### Restore #####################
+elif [ "${0##*/}" = "myrestore" ]; then
 
 	# Confirm
 	read -p "YOU ARE ABOUT TO OVERWRITE YOUR PARTITIONS - CONFIRM (y/N)?" -n 1 -r; echo;if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Aborting.";exit; fi
@@ -283,23 +252,36 @@ else
 	read -p "DANGER!  Really overwrite your hard disk partitions? (y/N)?" -n 1 -r; echo;if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Aborting.";exit; fi
 
  	echo "--- Restoring:   / -----------------------------------"
- 	$MyRsync 		"/mnt/$BackupDir/root/"		"/mnt/$MyRoot"			; echo
 
 	echo "--- Restoring:   /home -------------------------------"
- 	$MyRsync		"/mnt/$BackupDir/home/"		"/mnt/$MyHome"			; echo
+ 	$MyRsync		"/mnt/$BackupDir/$HOME_DIR/"	"/mnt/$MyHome"				; echo
 	
    if [ "$MyShared" ]; then		#no shared partion on Sharon's machine
 	echo "--- Restoring:   /var --------------------------------"
- 	$MyRsync		"/mnt/$BackupDir/var/"		"/mnt/$MyVar"			; echo
+ 	$MyRsync		"/mnt/$BackupDir/$VAR_DIR/"	"/mnt/$MyVar"				; echo
 	
 	echo "--- Restoring:   Shared ------------------------------"
- 	$MyRsync 		"/mnt/$BackupDir/shared/"	"/mnt/$MyShared"		; echo
+ 	$MyRsync 		"/mnt/$BackupDir/$SHARED_DIR/"	"/mnt/$MyShared"			; echo
+   fi
+
+### Restore media ###############
+elif [ "${0##*/}" = "myrestore.media" ]; then
+
+   if [ "$MyShared" ]; then		#no Media shared partion on Sharon's machine	
+	# Confirm
+	read -p "YOU ARE ABOUT TO OVERWRITE YOUR Media PARTITION - CONFIRM (y/N)?" -n 1 -r; echo;if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Aborting.";exit; fi
+	echo;
+	read -p "DANGER!  Really overwrite your hard disk partition?	   (y/N)?" -n 1 -r; echo;if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Aborting.";exit; fi
+	
+	echo "--- Restoring:   Media -------------------------------"
+ 	$MyRsync 		"/mnt/$BackupDir/$MEDIA_DIR/"	"/mnt/$MyMedia-media"			; echo
+   else
+	echo "Error: No Media shared partion on Sharons machine"
    fi
 
 fi
 
 
-#exit
 
 #-------------------------------------------------------------------------------------
 #cleanup
@@ -309,6 +291,7 @@ fi
 if [ "$MyShared" ]; then		#no var or shared partions on Sharon's machine
  sudo umount "/mnt/$MyVar"	;sudo rmdir "/mnt/$MyVar"
  sudo umount "/mnt/$MyShared"	;sudo rmdir "/mnt/$MyShared"
+ sudo umount "/mnt/$MyMedia"	;sudo rmdir "/mnt/$MyMedia"
 fi
 
 
