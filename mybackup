@@ -175,14 +175,6 @@ RootExclude=" --exclude={\"/dev/*\",\"/lost+found\",\"/media/*\",\"/mnt/*\",\"/p
 
 #=================================================================
 #Subdir names
-
-#old
-	  ROOT_DIR=root
-	  HOME_DIR=home
-	   VAR_DIR=var
-	SHARED_DIR=shared
-
-#new
 	  ROOT_DIR=root
 	  HOME_DIR=home
 	   VAR_DIR=var
