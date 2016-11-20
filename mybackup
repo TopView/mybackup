@@ -1,0 +1,214 @@
+#!/bin/bash
+
+#1.1
+#Usage:
+#
+# mybackup				 - show list of current backups
+# myrestore				 - ''
+#
+# mybackup  <machine> <BackupFolderName> - machine: love2d or sharon-pc
+# myrestore <machine> <BackupFolderName> - by convention name is 'nn-descriptiveName' (so it sorts by date)
+
+
+#################################################################
+#################################################################
+
+### PARTITIONS ######################
+#Partition labels (also used for mount point folder names):
+#  Note: use labels rather than UUID as they might be more controllable.
+BackupDrive='Linux backup'		# USB backup drive (I removed space from 'name' & it removed it from 'label')
+ BackupBase="$BackupDrive/Backups"	# Backup base folder directory & name
+     SubDir="files"
+
+
+
+### MOUNTING 1of2 ######################
+ sudo umount "/mnt/$BackupDrive">& /dev/null	# --- cleanup from prior failed attempt:
+ sudo mkdir  "/mnt/$BackupDrive">& /dev/null; sudo mount -L "$BackupDrive"	"/mnt/$BackupDrive" -o defaults,suid 	>& /dev/null #Allow to set user owner of files
+
+
+
+
+########################################################################
+### FUNCTIONS #################################################################
+
+####################
+function usage		{ echo; echo "Usage: ${0##*/} [machine name: Love2d|Sharon-pc] [BackupFolderName]";echo;}
+
+####################
+#If parameter just show dirs for that machine, else show for both
+function myls {	
+ echo -n "'$1' existing backups:"
+ if [ -d "$2" ]; then echo; ls -lFgG "$2" |grep -v ^total |grep ' [0-9][0-9]-' |sed 's/..................//'; else echo ' (none)'; fi; 
+}
+
+##################
+function currentbackups {
+ if [ "$1" ]; then
+	myls "$1"		"/mnt/$BackupBase/$1/$SubDir"
+ else
+	myls 'Love2d'		"/mnt/$BackupBase/Love2d/$SubDir"
+	echo
+	myls 'Sharon-pc'	"/mnt/$BackupBase/Sharon-pc/$SubDir"
+	echo
+ fi
+}
+
+###################
+function badmachine	{ echo "Machine type '$1' is invalid.";}
+
+###################
+function cleanup	{
+ # echo "--- cleaning up --------------------------------------"
+ sudo umount "/mnt/$BackupDrive"; rmdir "/mnt/$BackupDrive"
+}
+
+########################################################################
+########################################################################
+
+
+### CHECK INPUTS #######################################################
+#Check if backup name paramter exists:
+if [ $# = 0 ]; then 									  usage;					cleanup; exit;     fi
+if [ $# = 1 ]; then if [ "$1" != "Love2d" -a "$1" != "Sharon-pc" ]; then badmachine "$1"; usage; else usage; currentbackups "$1"; fi;  	cleanup; exit;     fi
+if [ $# = 2 ]; then if [ "$1" != "Love2d" -a "$1" != "Sharon-pc" ]; then badmachine "$1"; usage; 					cleanup; exit; fi; fi
+
+
+
+### MOUNTING 2of2 ######################
+#Tip use blkid to look at block labels
+#Use e2label to set ext labels
+#use gparted to set btrfs labels
+
+if [ "$1" = 'Love2d' ]; then
+# HOWARDS
+    MyRoot='d8root'		# Love2 Debian /   (root) partition name
+    MyHome='d8home'		# Love2 Debian /home	  partition name
+     MyVar='d8var'		# Love2 Debian /var	  partition name
+  MyShared='Shared'		# Love2 Debian Shared	  partition name
+
+ sudo umount	      "/mnt/$MyRoot"	>& /dev/null		# --- cleanup from prior failed attempt:
+ sudo umount	      "/mnt/$MyHome"	>& /dev/null
+ sudo umount	      "/mnt/$MyVar"	>& /dev/null
+ sudo umount	      "/mnt/$MyShared"	>& /dev/null
+
+ sudo umount "/media/ubuntu/$MyRoot" 	>& /dev/null		# Unmount them from ubuntu so they will work properly
+ sudo umount "/media/ubuntu/$MyHome" 	>& /dev/null
+ sudo umount "/media/ubuntu/$MyVar"	>& /dev/null
+ sudo umount "/media/ubuntu/$MyShared" 	>& /dev/null
+
+ sudo mkdir  "/mnt/$MyRoot"	>& /dev/null; sudo mount -L "$MyRoot"		"/mnt/$MyRoot"				>& /dev/null
+ sudo mkdir  "/mnt/$MyHome"	>& /dev/null; sudo mount -L "$MyHome"		"/mnt/$MyHome"				>& /dev/null
+ sudo mkdir  "/mnt/$MyVar"	>& /dev/null; sudo mount -L "$MyVar"		"/mnt/$MyVar"				>& /dev/null
+ sudo mkdir  "/mnt/$MyShared"	>& /dev/null; sudo mount -L "$MyShared"		"/mnt/$MyShared"			>& /dev/null
+
+
+else
+# SHARON's
+#   MyHome='uhome'		# Love2 Ubuntu /home	  partition name
+#   MyRoot='uroot'		# Love2 Ubuntu /   (root) partition name
+    MyHome='a41eaa3e-bd31-4ebc-86d4-cf8ed5f3e779'		# Love2 Ubuntu /home	  partition name
+    MyRoot='f3b7424c-0144-42a6-8488-62fbee94d245'		# Love2 Ubuntu /   (root) partition name
+
+ sudo umount	      "/mnt/$MyRoot"	>& /dev/null		# --- cleanup from prior failed attempt:
+ sudo umount	      "/mnt/$MyHome"	>& /dev/null			
+
+ sudo umount "/media/ubuntu/$MyRoot" 	>& /dev/null		# Unmount them from ubuntu so they will work properly
+ sudo umount "/media/ubuntu/$MyHome" 	>& /dev/null
+
+#sudo mkdir  "/mnt/$MyRoot"	>& /dev/null; sudo mount -L "$MyRoot"		"/mnt/$MyRoot"				>& /dev/null
+#sudo mkdir  "/mnt/$MyHome"	>& /dev/null; sudo mount -L "$MyHome"		"/mnt/$MyHome"				>& /dev/null
+ sudo mkdir  "/mnt/$MyRoot"	>& /dev/null; sudo mount -U "$MyRoot"		"/mnt/$MyRoot"				>& /dev/null
+ sudo mkdir  "/mnt/$MyHome"	>& /dev/null; sudo mount -U "$MyHome"		"/mnt/$MyHome"				>& /dev/null
+
+fi
+
+#=================================================================
+BackupDir="$BackupBase/$1/$SubDir/$2"	# /dir/BackupFolderName
+
+
+#rSync stuff:
+MyRsync="sudo rsync -aAXv --delete"
+RootExclude=" --exclude={\"/dev/*\",\"/lost+found\",\"/media/*\",\"/mnt/*\",\"/proc/*\",\"/run/*\",\"/sys/*\",\"/tmp/*\"}"
+HomeExclude=" --exclude='*cache*'"	#this does not work
+
+
+if [ "${0##*/}" = "mybackup" ]; then
+	#echo backing up...
+
+	echo; echo "--- Backing up:  / -----------------------------------"
+ 	sudo mkdir -p						"/mnt/$BackupDir/root"	# Making directories to save backup to
+	$MyRsync $RootExclude	"/mnt/$MyRoot/"			"/mnt/$BackupDir/root/"		; echo
+
+	echo; echo "--- Backing up:  /home -------------------------------"
+ 	sudo mkdir -p						"/mnt/$BackupDir/home"
+	$MyRsync $HomeExclude	"/mnt/$MyHome/"			"/mnt/$BackupDir/home/"		; echo
+
+   if [ "$MyShared" ]; then		#no var or shared partions on Sharon's machine
+
+	echo; echo "--- Backing up:  /var --------------------------------"
+ 	sudo mkdir -p						"/mnt/$BackupDir/var"
+	$MyRsync 		"/mnt/$MyVar/"			"/mnt/$BackupDir/var/"		; echo
+
+ 	echo; echo "--- Backing up:  Shared ------------------------------"
+ 	sudo mkdir -p 						"/mnt/$BackupDir/shared"
+ 	$MyRsync 		"/mnt/$MyShared/"		"/mnt/$BackupDir/shared/"	; echo
+   fi
+
+
+   # Backup MBR (but only of sda ??)
+   mkdir -p "/mnt/$BackupDir/mbr"
+
+   drive=`sudo blkid | grep d8root | sed s/[0-9]:.*//`
+   part=`echo $drive | sed s#/dev/##`
+
+   echo;echo "--- Backing up:  MBR of $part ----------------------"
+   sudo dd if="$drive" of="/mnt/$BackupDir/mbr/dd-$part-0-512" bs=1 count=512
+   sudo dd if="$drive" of="/mnt/$BackupDir/mbr/dd-$part-0-1M"  bs=1 count=1M
+
+   echo 
+   echo of this drive:
+   lsblk | grep "$part"
+
+
+else
+
+	# Confirm
+	read -p "YOU ARE ABOUT TO OVERWRITE YOUR PARTITIONS - CONFIRM (y/N)?" -n 1 -r; echo;if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Aborting.";exit; fi
+	echo;
+	read -p "DANGER!  Really overwrite your hard disk partitions? (y/N)?" -n 1 -r; echo;if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Aborting.";exit; fi
+
+ 	echo "--- Restoring:   / -----------------------------------"
+ 	$MyRsync 		"/mnt/$BackupDir/root/"		"/mnt/$MyRoot"			; echo
+
+	echo "--- Restoring:   /home -------------------------------"
+ 	$MyRsync		"/mnt/$BackupDir/home/"		"/mnt/$MyHome"			; echo
+	
+   if [ "$MyShared" ]; then		#no shared partion on Sharon's machine
+	echo "--- Restoring:   /var --------------------------------"
+ 	$MyRsync		"/mnt/$BackupDir/var/"		"/mnt/$MyVar"			; echo
+	
+	echo "--- Restoring:   Shared ------------------------------"
+ 	$MyRsync 		"/mnt/$BackupDir/shared/"	"/mnt/$MyShared"		; echo
+   fi
+
+fi
+
+
+#exit
+
+#-------------------------------------------------------------------------------------
+#cleanup
+ sudo umount "/mnt/$MyRoot"	;sudo rmdir "/mnt/$MyRoot"
+ sudo umount "/mnt/$MyHome"	;sudo rmdir "/mnt/$MyHome"
+
+if [ "$MyShared" ]; then		#no var or shared partions on Sharon's machine
+ sudo umount "/mnt/$MyVar"	;sudo rmdir "/mnt/$MyVar"
+ sudo umount "/mnt/$MyShared"	;sudo rmdir "/mnt/$MyShared"
+fi
+
+
+ echo "=== DONE. ============================================"
+
+
+exit 0
