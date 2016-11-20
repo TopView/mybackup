@@ -19,6 +19,7 @@ version=1.2	# added sudo to mkdir for MBR
 version=1.3	# space betweeen MBRs
 version=1.4	# transition to new Media partition (and other partitions renamed)
 version=1.5	# Shared and Media partitions
+version=1.6	# Shared and Media partitions - removed "-media"
 
 if [ "$1" = "--version" ]; then echo version: ${version}; exit; fi
 
@@ -231,12 +232,11 @@ if [ "${0##*/}" = "mybackup" ]; then
 ### Backup media #################
 elif [ "${0##*/}" = "mybackup.media" ]; then
 
-echo "xx"
 
    if [ "$MyShared" ]; then		#no var or shared partions on Sharon's machine
  	echo; echo "--- Backing up:  Media -------------------------------"
- 	sudo mkdir -p 						"/mnt/$BackupDir-media/$MEDIA_DIR"
- 	$MyRsync 		"/mnt/$MyMedia/"		"/mnt/$BackupDir-media/$MEDIA_DIR/"	; echo
+ 	sudo mkdir -p 						"/mnt/$BackupDir/$MEDIA_DIR"
+ 	$MyRsync 		"/mnt/$MyMedia/"		"/mnt/$BackupDir/$MEDIA_DIR/"	; echo
    else
 	echo "Error: No Media shared partion on Sharons machine"
    fi
