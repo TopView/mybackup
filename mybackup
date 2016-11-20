@@ -17,19 +17,7 @@
 # myrestore --version
 
 
-
-version=1.1	# first noted verison.
-version=1.2	# added sudo to mkdir for MBR 	
-		# merged in notes from older mybackup
-		# installed on: Love2d		- still to be installed on U2, U3, Linux Backup drive
-version=1.3	# space betweeen MBRs
-version=1.4	# transition to new Media partition (and other partitions renamed)
-version=1.5	# Shared and Media partitions
-version=1.6	# Shared and Media partitions - removed "-media"
-version=1.7	# removed "xx"
-version=1.8	# changed UUID to LABEL for Sharon's machine
-version=1.9	# exclude howard/.cashed
-
+version=2.0	# moved into git
 if [ "$1" = "--version" ]; then echo version: ${version}; exit; fi
 
 
