@@ -13,7 +13,7 @@ It is run from a USB Ubuntu stick, i.e. while the OS it's backup up is not runni
   
 **Misc files**
 
-    .editorconfig         - Sets github editing options (like tabs set to 4 wide)
-    Change notes.txt      -  
-    README.md             - This help text
-    LICENSE               - Legal verbage  
+    .editorconfig     - Sets github editing options (like tabs set to 4 wide)
+    Change notes.txt  -  
+    README.md         - This help text
+    LICENSE           - Legal verbage  
